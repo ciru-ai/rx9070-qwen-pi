@@ -1,8 +1,8 @@
 # Qwen + Pi on an RX 9070
 
-Install **Qwen3.8 27B GGUF + MTP**, llama.cpp ROCm/HIP, and a configured **Pi coding agent** on Pop!_OS. The default context is now **32,768 tokens**, with **64K available as an option**. Simple on/off commands manage the model in the background.
+Install **Qwen3.8 27B GGUF + MTP**, llama.cpp ROCm/HIP, and a configured **Pi coding agent** on Pop!_OS with an **RX 9070 16 GB**. Follow the steps below to measure your card and choose the largest tested context with all model layers on the GPU. Simple commands turn it on/off and resume Pi sessions.
 
-## Install or update
+## 1. Install or update
 
 Allow **20 GB free SSD space** and about **13 GB of downloads**. **32 GB system RAM is recommended.** Update Pop!_OS and reboot after pending kernel/firmware updates.
 
@@ -12,14 +12,28 @@ If updating, stop the old server first: use `qwen off` for this version, or **Ct
 mkdir -p ~/rx9070-qwen
 cd ~/rx9070-qwen
 curl -fL --retry 3 https://github.com/ciru-ai/rx9070-qwen-pi/releases/latest/download/Install-Qwen-PopOS.sh -o Install-Qwen-PopOS.sh
-bash Install-Qwen-PopOS.sh
+bash Install-Qwen-PopOS.sh --extract-only
 ```
 
-If `curl` is missing, run `sudo apt install curl`. Do not run the installer with sudo. It requests elevated access only for OS dependencies and GPU groups. If it asks for a logout/login, do that once and run the installer again.
+If `curl` is missing, run `sudo apt install curl`. Do not run the installer with sudo. It requests elevated access only for OS dependencies and GPU groups. If setup asks for a logout/login, do that once and repeat the tuning command below.
 
-The installer downloads and verifies the exact model, llama.cpp with its bundled ROCm runtime, and Pi's standalone binary. **No Node.js or npm is required.** It then starts the model in your systemd user session and returns after **READY**. Closing the terminal does not stop the background model. The service is not enabled at boot; run `on` after a new login/reboot.
+This extracts the launcher. The next command installs required OS packages, downloads and verifies the exact model, llama.cpp with its bundled ROCm runtime, and Pi's standalone binary. **No Node.js or npm is required.**
 
-## Turn it on and off
+## 2. Measure your GPU and start Qwen
+
+Close games and GPU-heavy applications, then run:
+
+```bash
+~/rx9070-qwen/RX9070-Qwen/qwen tune && ~/rx9070-qwen/RX9070-Qwen/qwen on
+```
+
+The tuner keeps MTP enabled, tests Q8/Q4 KV caches, and saves the largest passing tested context with all model layers on GPU. It checks a nearly full context plus generation and leaves 512 MiB of sampled free VRAM. Q4 uses less memory but can affect quality. This can take several minutes. If no profile passes, it reports the failure and the command does not start a model.
+
+Wait for **READY/ON**, then use Pi below. Closing the terminal does not stop the background model. The service is not enabled at boot; run `on` after a new login/reboot. After a later retune, restart Pi to load the new context settings.
+
+Running `bash Install-Qwen-PopOS.sh` without `--extract-only` is an alternative that starts the saved profile, or 32K automatic GPU/CPU fitting when no profile is saved. The measured setup above avoids selecting a context by assumption.
+
+## Everyday on/off commands
 
 ```bash
 # Start; reuse the last selected settings.
@@ -37,7 +51,7 @@ The installer downloads and verifies the exact model, llama.cpp with its bundled
 
 The browser chat/API is usually at `http://127.0.0.1:8080`; `status` prints the actual port. The endpoint is localhost only. Repeating `on` does not launch another model copy.
 
-## Use Pi continuously
+## 3. Use Pi continuously
 
 ```bash
 cd /path/to/your/project
@@ -60,14 +74,13 @@ At 32K, Pi has a **4096-token maximum response**, starts auto-compaction with **
 
 Restart Pi after changing server context. A short system prompt and disabled automatic skills/extensions loading keep prompt overhead predictable; standard read/bash/edit/write tools remain enabled. Pi's offline mode disables automatic network activity, while inference still connects to the local model. Large project instructions/files can still consume the context.
 
-## Find the largest fully GPU context on his RX 9070
+## Retune and inspect measured VRAM
 
-The weight file size is not total GPU memory use. Run the measurement on his actual desktop:
+The weight file size is not total GPU memory use. Rerun the measurement when your available VRAM changes:
 
 ```bash
 ~/rx9070-qwen/RX9070-Qwen/qwen off
-~/rx9070-qwen/RX9070-Qwen/qwen tune
-~/rx9070-qwen/RX9070-Qwen/qwen on
+~/rx9070-qwen/RX9070-Qwen/qwen tune && ~/rx9070-qwen/RX9070-Qwen/qwen on
 ```
 
 Only run `on` after the tuner reports a saved passing profile. It tests contexts from 262,144 down through 131,072 / 98,304 / 65,536 / 49,152 / 32,768 / 24,576 / 16,384 / 8,192. At each context it tries Q8 KV, then Q4. **MTP2 stays on, all layers must be GPU-offloaded, and CPU fitting is disabled.** Q4 saves KV memory but can affect quality. The first passing context is the largest tested in this list, not an exact token-by-token maximum.
@@ -78,7 +91,7 @@ It can take several minutes per fitting profile. Ctrl+C stops the test and clean
 
 `qwen tune --max-ctx 65536` bounds the search. `--headroom 1024` leaves more measured headroom. `--quick` only tests short generation and explicitly does **not** validate a filled context. The current default `qwen on` remains 32K automatic fitting until tuning succeeds or explicit options replace it.
 
-This tuner requires one identifiable AMD GPU with at least 14 GiB VRAM and a successful RX 9070 engine probe. It refuses ambiguous multi-GPU telemetry. Its lifecycle/selection logic and an actual CUDA allocation-failure path were tested here; full ROCm inference still needs the friend's hardware.
+This tuner requires one identifiable AMD GPU with at least 14 GiB VRAM and a successful RX 9070 engine probe. It refuses ambiguous multi-GPU telemetry. Its lifecycle/selection logic and an actual CUDA allocation-failure path were tested here; full ROCm inference still needs to be validated on your hardware.
 
 [Direct VRAM measurements and allocation breakdown](benchmarks/DIRECT-VRAM.md).
 
