@@ -1,4 +1,4 @@
-import importlib.util,json,os,pathlib,subprocess,tempfile,threading,unittest
+import importlib.util,io,json,os,pathlib,subprocess,tempfile,threading,unittest
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from unittest.mock import patch
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -46,6 +46,30 @@ class Tests(unittest.TestCase):
                 print('Tools:',[t['function']['name'] for t in initial['tools']])
                 self.assertEqual({t['function']['name'] for t in initial['tools']},{'read','write','edit','bash'})
         finally:server.shutdown();server.server_close();thread.join()
+    def test_launcher_resumes_project_unless_explicitly_overridden(self):
+        with tempfile.TemporaryDirectory() as temp,patch.object(L,'ROOT',pathlib.Path(temp)):
+            L.configure_pi(8080,32768)
+            exe=L.ROOT/'pi-runtime'/L.PI_VERSION/'pi'/'pi'
+            exe.parent.mkdir(parents=True);exe.touch()
+            for flags,should_continue in [([],True),(['--new'],False),(['--print','hello'],False),(['--session','saved.jsonl'],False)]:
+                with patch.object(L.urllib.request,'build_opener') as opener,patch.object(L.os,'execve') as execute:
+                    opener.return_value.open.return_value=io.BytesIO(b'{"data":[{"id":"qwen3.8-27b"}]}')
+                    L.run_pi(flags)
+                    argv=execute.call_args.args[1]
+                    self.assertEqual('--continue' in argv,should_continue)
+                    self.assertNotIn('--new',argv)
+                    self.assertIn('--no-skills',argv)
+                    self.assertIn('--no-extensions',argv)
+    def test_continuous_profile(self):
+        with tempfile.TemporaryDirectory() as temp,patch.object(L,'ROOT',pathlib.Path(temp)):
+            L.configure_pi(8080,32768)
+            data=json.loads((L.ROOT/'pi-agent/settings.json').read_text())
+            self.assertTrue(data['compaction']['enabled'])
+            budgets=data['compaction']['modelOverrides']['rx9070-local/qwen3.8-27b']
+            self.assertEqual(budgets,{'reserveTokens':6144,'keepRecentTokens':8192})
+            model=json.loads((L.ROOT/'pi-agent/models.json').read_text())['providers']['rx9070-local']['models'][0]
+            self.assertEqual(model['contextWindow'],32768)
+            self.assertEqual(model['maxTokens'],4096)
     def test_low_memory_profile_and_preservation(self):
         with tempfile.TemporaryDirectory() as temp,patch.object(L,'ROOT',pathlib.Path(temp)):
             L.configure_pi(8080,4096)

@@ -11,3 +11,6 @@ RX9070-Qwen/logs/
 RX9070-Qwen/pi-runtime/
 RX9070-Qwen/pi-agent/
 RX9070-Qwen/.linux-dependencies-ready
+RX9070-Qwen/.launcher.lock
+RX9070-Qwen/ready.json
+RX9070-Qwen/server-options.json

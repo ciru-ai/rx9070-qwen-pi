@@ -1,193 +1,139 @@
-RX 9070 16 GB - Qwen3.8 27B - Pop!_OS / Linux
-=================================
+RX 9070 16 GB - Qwen3.8 27B MTP + Pi - Pop!_OS
+================================================
 
-QUICK START
+INSTALL OR UPDATE
 
-Single-file installer: save Install-Qwen-PopOS.sh in a folder on your SSD,
-open a terminal there, and run:
+Save Install-Qwen-PopOS.sh in a folder on your SSD and run it with bash.
+It creates RX9070-Qwen beside itself, downloads verified engine/model/Pi files,
+then starts Qwen as a background systemd user service. Existing downloads and
+Pi sessions are preserved. Before upgrading an old foreground installation,
+press Ctrl+C in its server terminal; before updating a managed installation,
+run qwen off. Do not run the installer with sudo.
 
+Typical installation:
+
+    mkdir -p ~/rx9070-qwen
+    cd ~/rx9070-qwen
+    curl -fL https://github.com/ciru-ai/rx9070-qwen-pi/releases/latest/download/Install-Qwen-PopOS.sh -o Install-Qwen-PopOS.sh
     bash Install-Qwen-PopOS.sh
 
-It creates RX9070-Qwen beside itself. Keep that folder: it contains the engine
-and model. Run the same installer again to launch, or use the folder's launcher.
+CONTROLS
 
-If you downloaded the ZIP instead:
+    ~/rx9070-qwen/RX9070-Qwen/qwen on
+    ~/rx9070-qwen/RX9070-Qwen/qwen off
+    ~/rx9070-qwen/RX9070-Qwen/qwen status
+    ~/rx9070-qwen/RX9070-Qwen/qwen logs
+    ~/rx9070-qwen/RX9070-Qwen/qwen restart --ctx 65536
 
-1. Extract RX9070-Qwen-PopOS.zip to a folder on your SSD.
-2. Open a terminal in the extracted RX9070-Qwen folder.
-3. Run:
+The on command returns after READY. You can then close that terminal. The
+service lives in your desktop login session; it is not enabled at boot.
+Off stops the service and its model process, releasing their GPU memory.
+Explicit options are saved, so a later on uses the same settings. To reset
+back to the standard profile, use qwen restart --ctx 32768 --gpu-layers auto
+--kv-cache q8_0. This installation has its own service name.
 
-       bash RUN-LINUX.sh
+The browser/API address is printed by on/status, usually http://127.0.0.1:8080.
+The API is localhost only; no firewall change or remote access is configured.
+Use the old START-POP-OS.sh only if you want a foreground server. Stop that
+foreground server with Ctrl+C before switching to the on/off controller.
 
-Do NOT use sudo in front of that command. The script asks for your password
-only when it installs OS packages or fixes GPU group membership.
-
-First run downloads about 13 GB, installs llama.cpp plus its ROCm/HIP runtime,
-installs Pi, downloads the exact model, verifies SHA-256 checksums, and opens
-the chat page. Pi's standalone binary needs no separate Node.js/npm install.
-Keep the terminal open while chatting. Press Ctrl+C to stop. Next time, run
-the same command; completed downloads are reused. Interrupted model downloads
-resume. The server listens only on your computer, usually http://127.0.0.1:8080.
-If that port is occupied, it chooses another and prints the actual address.
-
-USE PI FOR CODING
-
-Keep the server terminal open and wait for READY. Open a second terminal:
+PI FOR CONTINUOUS CODING
 
     cd /path/to/your/project
-    bash /path/to/RX9070-Qwen/PI.sh
+    ~/rx9070-qwen/RX9070-Qwen/qwen pi
 
-For example, if you ran the installer from ~/rx9070-qwen:
+Pi uses the local Qwen model, with no login or paid API key. It automatically
+continues the most recent session for your current project directory. To start
+a fresh conversation, use qwen pi --new. The original PI.sh entry point still
+works. Print/RPC/session-selection arguments can be passed through to Pi.
 
-    mkdir -p ~/my-project
-    cd ~/my-project
-    bash ~/rx9070-qwen/RX9070-Qwen/PI.sh
+Pi's saved profile is RX9070-Qwen/pi-agent; your normal ~/.pi is untouched.
+Sessions persist across exiting Pi, turning off Qwen, and restarting the PC.
+Run qwen on again and qwen pi from the same project to continue.
 
-Pi is already configured to use this local Qwen model. No /login, paid API key,
-or manual model selection is needed. PI.sh keeps your current project directory.
-Pi can read, edit, and write project files and execute shell commands.
+At 32K context, Pi allows up to 4096 output tokens, starts auto-compaction with
+6144 tokens reserved, and retains up to 8192 recent tokens. At 64K, it reserves
+8192 tokens and keeps 8192 recent tokens. These limits are recalculated for
+the actual context when the server becomes ready. Restart Pi after changing
+server context. /compact can summarize manually; compaction preserves a summary,
+not every old detail verbatim. Your session file retains the original history.
 
-The dedicated Pi profile lives in RX9070-Qwen/pi-agent/. It sets the provider
-to rx9070-local, model to qwen3.8-27b, and uses the actual server port and context.
-Your usual ~/.pi profile is not modified. There is no global pi command added;
-use PI.sh to select this installation and profile. Pass extra Pi flags after it,
-for example: bash /path/to/RX9070-Qwen/PI.sh --print "Explain this project"
+The standard read/bash/edit/write tools remain enabled. Pi can modify files and
+run commands in its current project. It uses a concise prompt; automatic
+skills/extensions loading is disabled to keep context predictable. Pi offline
+mode disables automatic network activity while inference calls your local model.
+Large files/project instructions can still fill context; read relevant sections.
 
-For this small context, Pi uses a short system prompt, at most 1024 output
-tokens (512 in the 2K fallback), and matching compaction/history limits.
-It retains the standard read/bash/edit/write tools. PI.sh disables automatic
-skills/extensions loading to keep the prompt small and uses Pi's offline mode
-to disable automatic network activity; inference still calls your local server.
-Existing project instructions and large tool outputs can still consume context.
-Use small file sections/tasks; 2K is a troubleshooting profile, not a roomy
-coding workspace. Restart Pi after restarting the server with a new context.
+MEMORY AND MODEL SETTINGS
 
-REQUIREMENTS
+Default context is 32768 tokens, shared by prompt/history and response: 8 times
+the original 4K. MTP stays enabled, with 2 draft tokens and one server slot.
+Main and draft KV use Q8; flash attention is on; prompt batch/microbatch 256/64.
+Thinking is off to conserve the output/context budget; this is separate from MTP.
+The model is text-only here; no vision projector is downloaded.
 
-- RX 9070 16 GB; x86-64 Linux with a working AMD kernel driver and GPU firmware.
-- Intended for up-to-date Pop!_OS (22.04/24.04 with a working RX 9070 driver).
-  Use the normal Pop!_OS software updater to install kernel/firmware updates,
-  and reboot before setup if updates are pending. Apt, dnf, and pacman installers
-  are included. The prebuilt engine targets Ubuntu/glibc; compatibility with
-  every distro is not guaranteed. Alpine/musl and NixOS are not automatic installs.
-- Python 3.10+ (installed by the shell launcher if needed).
-- 20 GB free SSD space; 32 GB system RAM recommended.
-- Internet for the first setup. No model/API subscription is required.
+Automatic VRAM fitting keeps the requested context and places some layers on
+CPU when GPU memory is tight. CPU offload reduces speed. Closing GPU-heavy apps
+can improve how much fits on the GPU. The 1536 MiB fitting margin is a target,
+not an enforced VRAM cap. CUDA fit results do not guarantee ROCm memory behavior.
 
-The bundled runtime does not replace the AMD display/kernel driver. If /dev/kfd
-is absent, update the distro kernel and AMD GPU firmware/driver, then reboot.
-Pop!_OS includes the AMDGPU kernel driver. Do not install amdgpu-dkms or the
-old Ubuntu ROCm package for this launcher; the modern runtime is bundled.
-If GPU permissions need fixing, the script adds your account to the relevant
-render/video groups and asks you to log out and back in. It never changes GPU
-device permissions to world-writable or launches the model as root.
+If startup still fails to allocate memory, it retries with one MTP draft token
+at the same context. Context is never silently reduced. If that also fails,
+it stops with an error. Low-memory mode explicitly selects 8K, not 2K.
 
-DEFAULT SETTINGS
+    qwen restart --ctx 65536                  # larger context, potentially slower
+    qwen restart --ctx 32768 --gpu-layers 999  # force all weights on GPU; may OOM
+    qwen restart --ctx 65536 --kv-cache q4_0   # smaller KV; quality may differ
+    qwen restart --low-memory                # 8K, one MTP draft token
+    qwen restart --ctx 32768 --no-mtp          # explicit MTP troubleshooting only
 
-- Exact model: Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf
-- Full GPU layer offload to the detected RX 9070; one chat slot.
-- Context: 4096 tokens total, shared by prompt/history and generated answer.
-- Flash Attention on; K and V caches q8_0 for main and MTP contexts.
-- MTP on: --spec-type draft-mtp, at most 2 draft tokens.
-- Prompt batch 256; physical microbatch 64; prompt RAM cache disabled.
-- Engine's embedded web chat and model's embedded chat template.
-- Thinking is off to conserve the small context and response budget; MTP stays on.
-- Text chat only; no extra vision projector is downloaded.
+Use the full qwen path above unless you created a shell alias.
+The exact model is Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf: 12,120,016,960 bytes,
+about 11.29 GiB. Weight file size is not total VRAM use; KV, compute buffers,
+MTP/recurrent state and desktop applications also need memory.
 
-The file is 12,120,016,960 bytes (12.12 decimal GB, about 11.29 GiB).
-File size is not an exact measurement of GPU weight allocation. KV cache,
-compute buffers, MTP/recurrent state, the display, and other applications
-all need memory too. There is no guaranteed fixed 3.5 GB KV allowance.
-These are conservative starting settings, not a hardware-validated fit promise.
+PREREQUISITES AND TROUBLESHOOTING
 
-If startup reports a memory allocation failure, the normal launcher retries
-once at 2048 context and one MTP draft token. It keeps MTP enabled. The retry
-is only for startup allocation errors, not arbitrary crashes or later errors.
+- RX 9070 16 GB, x86-64 Pop!_OS with working AMDGPU kernel driver/firmware.
+- 20 GB free SSD space, about 13 GB initial download, 32 GB system RAM recommended.
+- Python 3.10+ and systemd user sessions. The launcher installs OS dependencies.
+- Pi's pinned standalone binary needs no Node.js or npm installation.
+- Intended for updated Pop!_OS 22.04/24.04; other apt/dnf/pacman distros may work.
 
-LOW-MEMORY / TROUBLESHOOTING
+If /dev/kfd is missing, update Pop!_OS kernel/AMD firmware, reboot, and retry.
+The script uses the built-in AMDGPU driver with a bundled ROCm user-space runtime.
+Do not install amdgpu-dkms or the old distro ROCm package for this setup.
+GPU group changes require a full logout/login once, then rerun qwen on.
 
-Close games and other GPU-heavy apps first. Start directly in the smaller mode:
+If a download is interrupted, rerun to resume. SHA-256 mismatches name the bad
+file: move it aside and retry. --verify forces rehashing of a cached model.
+To reuse the exact GGUF already on disk, add --model /absolute/path/model.gguf.
 
-    bash LOW-MEMORY.sh
+Logs are in RX9070-Qwen/logs and qwen logs. Runtime failures stop with an error;
+the installer does not repeatedly restart a failing GPU workload. There is one
+server slot, so simultaneous browser/Pi requests share that slot.
 
-For a deliberate comparison or to diagnose MTP-specific errors:
+Turn qwen off before deleting the installation folder. That folder contains the
+model, runtimes, logs and Pi profile/sessions. OS packages, GPU groups and any
+files Pi edited in your project remain. No shell profile or global Pi is changed.
 
-    bash RUN-LINUX.sh --low-memory --no-mtp
+PINNED SOURCES
 
-That command disables MTP explicitly. Normal launch never silently disables it.
-MTP speedup varies with hardware and prompts; no tokens/second claim is made.
-
-If the small profile works reliably, you can try a larger context:
-
-    bash RUN-LINUX.sh --ctx 8192
-
-This may run out of VRAM. An explicitly requested context is not reduced
-automatically. Use the normal or low-memory launcher to recover.
-
-Already have this exact GGUF? Avoid another download:
-
-    bash RUN-LINUX.sh --model "/absolute/path/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf"
-
-That file is SHA-256 checked. A different model/quant is intentionally rejected.
-After a successful verification, unchanged file size and timestamp let the
-launcher skip rehashing on subsequent runs. Force rechecking with --verify.
-
-No GPU found: update the AMD driver/firmware and reboot. Check that /dev/kfd
-and your AMD /dev/dri/renderD* node are readable and writable by your account.
-The launcher stops before downloading the model if the engine cannot see a 9070.
-
-Missing shared library / GLIBC error: use a current supported distro, ensure
-its package updates are installed, and review the error in the terminal.
-On Arch, if pacman reports unavailable package versions, complete your normal
-full system update first; this script does not do a partial database upgrade.
-
-If a checksum fails, the error names the bad file. Move it aside (or delete
-only that named download) and rerun. Do not disable checksum validation.
-
-Logs are saved under logs/. Send the newest log with the distro/version if
-you need help. A driver reset or crash after the chat is ready stops the server;
-the launcher does not hide it or repeatedly restart the GPU workload.
-
-OpenAI-compatible API: http://127.0.0.1:8080/v1 (use the printed port).
-Model alias: qwen3.8-27b. No API key is configured; access is localhost only.
-
-All model/engine/Pi/profile/download/log files stay in this extracted folder.
-Pi may edit files in the project where you start it. Delete the installation
-folder to remove the installed apps and profile; project edits, OS packages,
-and added GPU group memberships remain.
-No background service, startup task, firewall rule, or telemetry is installed
-by this launcher. Subsequent normal runs use the pinned installed engine.
-
-PINNED SOURCES AND VALIDATION (2026-09-29)
-
-Engine: Lemonade's llama.cpp ROCm build b1334, gfx120X (includes gfx1201).
-The engine reports commit 680a036. This is a community nightly, including a
-ROCm nightly runtime, not an AMD production support guarantee.
+Engine: Lemonade b1334 / gfx120X, llama.cpp commit 680a036, community ROCm nightly.
 https://github.com/lemonade-sdk/llamacpp-rocm/releases/tag/b1334
-SHA-256: f37d79f0e81ccda27a7f1f12d6fdaf0669b2399ca9409a9b9dd5c25d126a6beb
+SHA256 f37d79f0e81ccda27a7f1f12d6fdaf0669b2399ca9409a9b9dd5c25d126a6beb
 
-Model repo/revision:
+Model: ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+Revision d562806dbafae37109975e970aae91b43e73b440
 https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
-d562806dbafae37109975e970aae91b43e73b440
-SHA-256: 58fd826723939933dc86f45b7fe04545cbc2de1c70f6fe2cdd3858c87a98c12f
+SHA256 58fd826723939933dc86f45b7fe04545cbc2de1c70f6fe2cdd3858c87a98c12f
 
-Pi: v0.87.1, official standalone Linux x64 release.
+Pi: official standalone v0.87.1, Linux x64.
 https://github.com/earendil-works/pi/releases/tag/v0.87.1
-SHA-256: 80d78dd62d50049a006b981d994c61255bcc10e730b0c278d4ea0a755909764c
-https://github.com/earendil-works/pi/blob/v0.87.1/packages/coding-agent/docs/models.md
-https://github.com/earendil-works/pi/blob/v0.87.1/packages/coding-agent/docs/settings.md
+SHA256 80d78dd62d50049a006b981d994c61255bcc10e730b0c278d4ea0a755909764c
 
-AMD explains the bundled-runtime distribution here:
-https://rocm.docs.amd.com/projects/ai-ecosystem/en/latest/inference/llamacpp.html
-System76 documents using ROCm with Pop!_OS's built-in AMDGPU driver:
 https://support.system76.com/support/rocm/
-MTP and server options:
-https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md
-https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
+https://rocm.docs.amd.com/projects/ai-ecosystem/en/latest/inference/llamacpp.html
 
-Validation: the pinned Linux engine was downloaded, SHA-256 verified, and its
---version, --help, and --list-devices commands were executed. Launcher download
-and process-management behavior was tested with local fixtures. The real Pi
-binary loaded the saved local-model defaults and completed a streamed tool-call
-round trip against a mock local OpenAI-compatible endpoint. The full 27B model
-has NOT been run on an RX 9070 by the author of this package.
+See the repository README and benchmark report for the RTX 4080 SUPER capacity
+screen and its limitations. RX 9070/ROCm full-model inference is still untested.

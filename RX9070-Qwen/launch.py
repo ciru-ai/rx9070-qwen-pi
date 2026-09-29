@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Linux RX 9070 launcher; standard library only. See START-HERE.txt."""
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -195,7 +196,7 @@ def configure_pi(port, ctx):
     """Dedicated profile: preserve the user's usual ~/.pi configuration."""
     folder = ROOT / 'pi-agent'
     folder.mkdir(exist_ok=True)
-    response_tokens = min(1024, ctx // 4)
+    response_tokens = min(4096, ctx // 4)
 
     def models(data):
         data.setdefault('providers', {})[PI_PROVIDER] = {
@@ -216,9 +217,10 @@ def configure_pi(port, ctx):
                     defaultThinkingLevel='off')
         data.setdefault('defaultTools', ['read', 'bash', 'edit', 'write'])
         compaction = data.setdefault('compaction', {})
-        compaction.setdefault('enabled', True)
+        compaction['enabled'] = True
         compaction.setdefault('modelOverrides', {})[PI_PROVIDER + '/qwen3.8-27b'] = {
-            'reserveTokens': response_tokens, 'keepRecentTokens': min(1024, ctx // 4),
+            'reserveTokens': min(ctx // 2, response_tokens + max(512, ctx // 16)),
+            'keepRecentTokens': min(8192, ctx // 4),
         }
         data.setdefault('branchSummary', {})['reserveTokens'] = response_tokens
 
@@ -238,7 +240,7 @@ def run_pi(pi_args):
     exe = ROOT / 'pi-runtime' / PI_VERSION / 'pi' / 'pi'
     config = ROOT / 'pi-agent' / 'models.json'
     if not exe.exists() or not config.exists():
-        raise RuntimeError('Start START-POP-OS.sh first and wait for READY, then run PI.sh in another terminal.')
+        raise RuntimeError('Run qwen on first and wait for READY, then run qwen pi from your project.')
     models = json.loads(config.read_text(encoding='utf-8'))
     provider = models['providers'][PI_PROVIDER]
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -248,12 +250,19 @@ def run_pi(pi_args):
         if not any(model.get('id') == 'qwen3.8-27b' for model in available):
             raise ValueError('Expected Qwen model is not served here.')
     except (OSError, ValueError, KeyError, urllib.error.URLError) as exc:
-        raise RuntimeError('Qwen is not ready. Keep START-POP-OS.sh running and wait for READY.') from exc
+        raise RuntimeError('Qwen is not ready. Run qwen on and wait for READY.') from exc
     env = os.environ.copy()
     env['PI_CODING_AGENT_DIR'] = str(ROOT / 'pi-agent')
     env['PI_OFFLINE'] = '1'
     args = [str(exe), '--offline', '--no-skills', '--no-extensions', '--provider', PI_PROVIDER,
-            '--model', 'qwen3.8-27b', '--thinking', 'off'] + pi_args
+            '--model', 'qwen3.8-27b', '--thinking', 'off']
+    new_session = '--new' in pi_args
+    pi_args = [arg for arg in pi_args if arg != '--new']
+    session_flags = ('--continue', '-c', '--resume', '-r', '--session', '--session-id',
+                     '--fork', '--no-session', '--print', '-p', '--mode')
+    if not new_session and not any(arg.split('=')[0] in session_flags for arg in pi_args):
+        args.append('--continue')
+    args += pi_args
     # Keep the calling terminal's working directory: that is Pi's project.
     os.execve(str(exe), args, env)
 
@@ -298,19 +307,20 @@ def probe(exe, env):
                        'The model has not been downloaded.')
 
 
-def arguments(exe, model, device, ctx, draft, port, no_mtp=False):
+def arguments(exe, model, device, ctx, draft, port, no_mtp=False, gpu_layers='auto', kv_cache='q8_0'):
     args = [str(exe), '--model', str(model), '--alias', 'qwen3.8-27b',
-            '--device', device, '--split-mode', 'none', '--gpu-layers', '999',
-            '--fit', 'off', '--ctx-size', str(ctx), '--parallel', '1',
+            '--device', device, '--split-mode', 'none', '--gpu-layers', str(gpu_layers),
+            '--fit', 'on' if gpu_layers == 'auto' else 'off', '--fit-target', '1536',
+            '--ctx-size', str(ctx), '--parallel', '1',
             '--batch-size', '256', '--ubatch-size', '64', '--flash-attn', 'on',
-            '--cache-type-k', 'q8_0', '--cache-type-v', 'q8_0', '--cache-ram', '0',
-            '--host', '127.0.0.1', '--port', str(port), '--jinja', '--reasoning', 'off']
+            '--cache-type-k', kv_cache, '--cache-type-v', kv_cache, '--cache-ram', '0',
+            '--host', '127.0.0.1', '--port', str(port), '--jinja', '--reasoning', 'off', '--metrics']
     if no_mtp:
         args += ['--spec-type', 'none']
     else:
         args += ['--spec-type', 'draft-mtp', '--spec-draft-n-max', str(draft),
-                 '--spec-draft-n-min', '1', '--spec-draft-type-k', 'q8_0',
-                 '--spec-draft-type-v', 'q8_0', '--spec-draft-device', device,
+                 '--spec-draft-n-min', '1', '--spec-draft-type-k', kv_cache,
+                 '--spec-draft-type-v', kv_cache, '--spec-draft-device', device,
                  '--spec-draft-ngl', '999']
     return args
 
@@ -386,9 +396,12 @@ def serve(args, env, log_path, port, browser, on_ready=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--low-memory', action='store_true', help='2048 context, one MTP draft token')
+    parser.add_argument('--low-memory', action='store_true', help='8192 context, one MTP draft token')
     parser.add_argument('--no-mtp', action='store_true', help='Explicit troubleshooting mode: disable MTP')
-    parser.add_argument('--ctx', type=int, choices=[2048, 4096, 8192, 16384], help='Override context; larger values may not fit')
+    parser.add_argument('--ctx', type=int, choices=[8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072, 262144], help='Override context; larger values may not fit')
+    parser.add_argument('--prepare-only', action='store_true', help='Install and verify dependencies/model/Pi, then exit')
+    parser.add_argument('--gpu-layers', default='auto', help='auto fits VRAM; 999 forces full GPU offload')
+    parser.add_argument('--kv-cache', choices=['q8_0', 'q4_0'], default='q8_0')
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--model', type=Path, help='Use an existing copy of this exact GGUF (SHA checked)')
     parser.add_argument('--verify', action='store_true', help='Rehash the model even if unchanged')
@@ -406,6 +419,14 @@ def main():
     if opts.pi is not None:
         run_pi(opts.pi)
         return 0
+    if opts.gpu_layers != 'auto' and not opts.gpu_layers.isdigit():
+        parser.error('--gpu-layers must be auto or a non-negative integer')
+    # Held for this process's lifetime; never permit two copies of this installation.
+    run_lock = (ROOT / '.launcher.lock').open('a')
+    try:
+        fcntl.flock(run_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        raise RuntimeError('This installation already has a running launcher. Use qwen status/off.')
     system = 'ubuntu'
     print('RX 9070 / Qwen3.8 27B / llama.cpp ROCm + MTP\n'
           'First run: about 13 GB to download. Allow 20 GB free disk space.\n'
@@ -424,26 +445,33 @@ def main():
         if not model.exists() and shutil.disk_usage(ROOT).free < remaining + 1024**3:
             raise RuntimeError('Not enough free disk space for the model. Free at least 14 GB and rerun.')
         download(MODEL_URL, model, MODEL_SHA, MODEL_SIZE, opts.verify)
+    if opts.prepare_only:
+        print('Installation ready.')
+        return 0
     port = choose_port(opts.port)
-    ctx = opts.ctx or (2048 if opts.low_memory else 4096)
+    ctx = opts.ctx or (8192 if opts.low_memory else 32768)
     draft = 1 if opts.low_memory else 2
     profiles = [(ctx, draft)]
-    if not opts.low_memory and not opts.ctx:
-        profiles.append((2048, 1))
+    if not opts.low_memory and not opts.no_mtp:
+        profiles.append((ctx, 1))
     (ROOT / 'logs').mkdir(exist_ok=True)
     for index, (ctx, draft) in enumerate(profiles):
         log_path = ROOT / 'logs' / (time.strftime('%Y%m%d-%H%M%S') + f'-ctx{ctx}.log')
-        print(f'Starting: context={ctx}, MTP={not opts.no_mtp}, draft={draft}, GPU={device}\nLog: {log_path}', flush=True)
+        print(f'Starting: context={ctx}, MTP={not opts.no_mtp}, draft={draft}, GPU={device}, layers={opts.gpu_layers}\nLog: {log_path}', flush=True)
+        if opts.gpu_layers == 'auto':
+            print('Automatic VRAM fitting may keep some layers on the CPU to preserve context; this reduces speed.', flush=True)
         def pi_ready():
             configure_pi(port, ctx)
+            update_json(ROOT / 'ready.json', lambda data: data.update(
+                launcher_pid=os.getpid(), port=port, context=ctx, mtp=not opts.no_mtp))
             print(f'Pi is installed and configured. In a second terminal, cd to your project and run:\n'
                   f'  bash "{ROOT / "PI.sh"}"\n', flush=True)
-        code, oom = serve(arguments(exe, model, device, ctx, draft, port, opts.no_mtp),
+        code, oom = serve(arguments(exe, model, device, ctx, draft, port, opts.no_mtp, opts.gpu_layers, opts.kv_cache),
                           env, log_path, port, not opts.no_browser, pi_ready)
         if code == 0:
             return 0
         if oom and index + 1 < len(profiles):
-            print('\nVRAM allocation failed. Retrying with 2048 context / one MTP draft token.\n', flush=True)
+            print('\nVRAM allocation failed. Keeping the context and retrying with one MTP draft token.\n', flush=True)
             continue
         raise RuntimeError(f'Server exited ({code}). Read {log_path}.\n'
                            'Try the LOW-MEMORY launcher after closing GPU-heavy apps.\n'

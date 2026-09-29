@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "pi_version": "0.87.1",
+  "model": "qwen3.8-27b",
+  "context": 32768,
+  "auto_compaction_enabled": true,
+  "session_resumed": true,
+  "real_write_tool_verified": true,
+  "real_bash_tool_verified": true,
+  "manual_compaction_tokens_before": 17013,
+  "manual_compaction_estimated_tokens_after": 1485,
+  "post_compaction_answer": "amber-river-9070",
+  "post_compaction_usage": {
+    "input": 26,
+    "output": 9,
+    "cacheRead": 1725,
+    "cacheWrite": 0,
+    "reasoning": 0,
+    "totalTokens": 1760,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+    }
+  },
+  "limitation": "Auto-compaction was enabled and settings validated; this integration test invoked manual compaction. This is not a long-duration unattended workload test."
+}

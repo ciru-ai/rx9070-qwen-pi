@@ -1,0 +1,231 @@
+{
+  "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+  "date": "2026-09-29",
+  "interpretation": "ctx is actual input tokens, not allocated context. 122657 allocated 65536; all other successful rows allocated 32768. GPU memory includes desktop apps. Automatic fitting can use CPU memory.",
+  "measurements": [
+    {
+      "label": "rx9070-proxy-4080-32768-q4_0-ngl56-122352-short",
+      "ctx": 43,
+      "gen": 128,
+      "avg_tps": 2.5374796229896694,
+      "ttfp_ms": 1551.9015789031982,
+      "timings": {
+        "cache_n": 0,
+        "draft_n": 106,
+        "draft_n_accepted": 74,
+        "predicted_ms": 50049.663,
+        "predicted_n": 128,
+        "predicted_per_second": 2.5374796229896694,
+        "predicted_per_token_ms": 394.0918346456693,
+        "prompt_ms": 1538.251,
+        "prompt_n": 43,
+        "prompt_per_second": 27.95382548101708,
+        "prompt_per_token_ms": 35.77327906976744
+      },
+      "memory": {
+        "delta_ram_used_bytes": 575893504,
+        "delta_vram_used_bytes": 252706816,
+        "idle": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 20450619392,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 44506210304,
+          "t": 1790699036.7386205,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 15858663424
+        },
+        "last": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 20126044160,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 44830785536,
+          "t": 1790699088.339998,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 16055795712
+        },
+        "peak_ram_used_bytes": 45082103808,
+        "peak_vram_used_bytes": 16111370240,
+        "sample_count": 100
+      },
+      "build_commit": "7fe450e19",
+      "build_number": 11146,
+      "backend": "CUDA",
+      "type_k": "q4_0",
+      "type_v": "q4_0",
+      "batch": 256,
+      "ubatch": 64,
+      "threads": 16,
+      "ngl": 56
+    },
+    {
+      "label": "rx9070-proxy-4080-32768-q8_0-nglauto-122527-short",
+      "ctx": 43,
+      "gen": 128,
+      "avg_tps": 6.654860838737789,
+      "ttfp_ms": 1796.1704730987549,
+      "timings": {
+        "cache_n": 0,
+        "draft_n": 102,
+        "draft_n_accepted": 76,
+        "predicted_ms": 19083.795,
+        "predicted_n": 128,
+        "predicted_per_second": 6.654860838737789,
+        "predicted_per_token_ms": 150.26610236220472,
+        "prompt_ms": 1782.25,
+        "prompt_n": 43,
+        "prompt_per_second": 24.126806003647076,
+        "prompt_per_token_ms": 41.44767441860465
+      },
+      "memory": {
+        "delta_ram_used_bytes": 807075840,
+        "delta_vram_used_bytes": 246415360,
+        "idle": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 20234731520,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 44722098176,
+          "t": 1790699132.987566,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14608760832
+        },
+        "last": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 19464314880,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 45492514816,
+          "t": 1790699153.8676598,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14819524608
+        },
+        "peak_ram_used_bytes": 45529174016,
+        "peak_vram_used_bytes": 14855176192,
+        "sample_count": 41
+      },
+      "build_commit": "7fe450e19",
+      "build_number": 11146,
+      "backend": "CUDA",
+      "type_k": "q8_0",
+      "type_v": "q8_0",
+      "batch": 256,
+      "ubatch": 64,
+      "threads": 16,
+      "ngl": null
+    },
+    {
+      "label": "rx9070-proxy-4080-65536-q8_0-nglauto-d2-122657-short",
+      "ctx": 43,
+      "gen": 128,
+      "avg_tps": 5.594576626228891,
+      "ttfp_ms": 1865.7948970794678,
+      "timings": {
+        "cache_n": 0,
+        "draft_n": 102,
+        "draft_n_accepted": 76,
+        "predicted_ms": 22700.556,
+        "predicted_n": 128,
+        "predicted_per_second": 5.594576626228891,
+        "predicted_per_token_ms": 178.74453543307087,
+        "prompt_ms": 1851.375,
+        "prompt_n": 43,
+        "prompt_per_second": 23.225980690027683,
+        "prompt_per_token_ms": 43.05523255813954
+      },
+      "memory": {
+        "delta_ram_used_bytes": 645791744,
+        "delta_vram_used_bytes": 235929600,
+        "idle": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 19488673792,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 45468155904,
+          "t": 1790699223.7346163,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14622392320
+        },
+        "last": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 18996224000,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 45960605696,
+          "t": 1790699248.3011167,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14823718912
+        },
+        "peak_ram_used_bytes": 46113947648,
+        "peak_vram_used_bytes": 14858321920,
+        "sample_count": 48
+      },
+      "build_commit": "7fe450e19",
+      "build_number": 11146,
+      "backend": "CUDA",
+      "type_k": "q8_0",
+      "type_v": "q8_0",
+      "batch": 256,
+      "ubatch": 64,
+      "threads": 16,
+      "ngl": null
+    },
+    {
+      "label": "rx9070-proxy-4080-32768-q8_0-nglauto-d2-122741-long",
+      "ctx": 31672,
+      "gen": 128,
+      "avg_tps": 4.489068693567193,
+      "ttfp_ms": 489211.53807640076,
+      "timings": {
+        "cache_n": 0,
+        "draft_n": 105,
+        "draft_n_accepted": 73,
+        "predicted_ms": 28290.946,
+        "predicted_n": 128,
+        "predicted_per_second": 4.489068693567193,
+        "predicted_per_token_ms": 222.76335433070867,
+        "prompt_ms": 489173.387,
+        "prompt_n": 31672,
+        "prompt_per_second": 64.74595888022012,
+        "prompt_per_token_ms": 15.444979382419803
+      },
+      "memory": {
+        "delta_ram_used_bytes": 1847230464,
+        "delta_vram_used_bytes": 358612992,
+        "idle": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 19770802176,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 45186027520,
+          "t": 1790699267.3249261,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14616100864
+        },
+        "last": {
+          "gtt_total_bytes": null,
+          "gtt_used_bytes": null,
+          "ram_available_bytes": 18388738048,
+          "ram_total_bytes": 64956829696,
+          "ram_used_bytes": 46568091648,
+          "t": 1790699784.8273723,
+          "vram_total_bytes": 17171480576,
+          "vram_used_bytes": 14934867968
+        },
+        "peak_ram_used_bytes": 47033257984,
+        "peak_vram_used_bytes": 14974713856,
+        "sample_count": 1001
+      },
+      "build_commit": "7fe450e19",
+      "build_number": 11146,
+      "backend": "CUDA",
+      "type_k": "q8_0",
+      "type_v": "q8_0",
+      "batch": 256,
+      "ubatch": 64,
+      "threads": 16,
+      "ngl": null
+    }
+  ]
+}
