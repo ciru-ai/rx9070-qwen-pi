@@ -1,5 +1,7 @@
 # RTX 4080 SUPER capacity screen — 2026-09-29
 
+**Follow-up:** [Direct per-process VRAM measurements and on-device tuning](DIRECT-VRAM.md) now quantify GPU/CPU placement and extend the allocation screen through 262K.
+
 **32K is the shipped default.** The exact GGUF completed a **31,672-token input plus 128 generated tokens** with MTP and Q8 KV enabled. **64K allocated successfully and completed a short request**, but a full 64K input was not tested. This is a useful tested range, not a measured maximum.
 
 The test GPU was an **NVIDIA GeForce RTX 4080 SUPER, 16 GB**, driver 610.57.04, on a live Linux desktop. Existing applications occupied about **3,830–3,845 MiB** before model startup; they were left running. Automatic fitting was necessary under these conditions. Treat these as **CUDA capacity proxies**, not RX 9070/ROCm speed or memory guarantees. The actual RX 9070 has not been tested with this installer.

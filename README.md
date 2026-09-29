@@ -60,6 +60,28 @@ At 32K, Pi has a **4096-token maximum response**, starts auto-compaction with **
 
 Restart Pi after changing server context. A short system prompt and disabled automatic skills/extensions loading keep prompt overhead predictable; standard read/bash/edit/write tools remain enabled. Pi's offline mode disables automatic network activity, while inference still connects to the local model. Large project instructions/files can still consume the context.
 
+## Find the largest fully GPU context on his RX 9070
+
+The weight file size is not total GPU memory use. Run the measurement on his actual desktop:
+
+```bash
+~/rx9070-qwen/RX9070-Qwen/qwen off
+~/rx9070-qwen/RX9070-Qwen/qwen tune
+~/rx9070-qwen/RX9070-Qwen/qwen on
+```
+
+Only run `on` after the tuner reports a saved passing profile. It tests contexts from 262,144 down through 131,072 / 98,304 / 65,536 / 49,152 / 32,768 / 24,576 / 16,384 / 8,192. At each context it tries Q8 KV, then Q4. **MTP2 stays on, all layers must be GPU-offloaded, and CPU fitting is disabled.** Q4 saves KV memory but can affect quality. The first passing context is the largest tested in this list, not an exact token-by-token maximum.
+
+A passing profile must process a **near-full context and generate 128 tokens**, while leaving at least **512 MiB of sampled free VRAM**. The tuner reads the AMD kernel's actual VRAM counters every 0.2 seconds, checks the engine's GPU layer count, and saves measurements, commands, responses, and allocation logs under `RX9070-Qwen/measurements`. Global VRAM includes desktop apps; increase over baseline is not an exclusive per-process measurement. Brief spikes can fall between samples, and later desktop workloads can consume the remaining headroom.
+
+It can take several minutes per fitting profile. Ctrl+C stops the test and cleans up its server. After success, `on` uses the measured profile, and Pi receives its context/compaction settings. Restart Pi to pick up the change. If no profile passes, existing settings remain unchanged; close GPU-heavy apps and retry. Existing automatic-fit settings may still use CPU memory until a fully GPU profile is successfully saved.
+
+`qwen tune --max-ctx 65536` bounds the search. `--headroom 1024` leaves more measured headroom. `--quick` only tests short generation and explicitly does **not** validate a filled context. The current default `qwen on` remains 32K automatic fitting until tuning succeeds or explicit options replace it.
+
+This tuner requires one identifiable AMD GPU with at least 14 GiB VRAM and a successful RX 9070 engine probe. It refuses ambiguous multi-GPU telemetry. Its lifecycle/selection logic and an actual CUDA allocation-failure path were tested here; full ROCm inference still needs the friend's hardware.
+
+[Direct VRAM measurements and allocation breakdown](benchmarks/DIRECT-VRAM.md).
+
 ## Context and GPU memory
 
 ```bash

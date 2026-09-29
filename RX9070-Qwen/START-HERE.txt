@@ -64,6 +64,29 @@ skills/extensions loading is disabled to keep context predictable. Pi offline
 mode disables automatic network activity while inference calls your local model.
 Large files/project instructions can still fill context; read relevant sections.
 
+MEASURE THE LARGEST FULLY GPU CONTEXT
+
+    ~/rx9070-qwen/RX9070-Qwen/qwen off
+    ~/rx9070-qwen/RX9070-Qwen/qwen tune
+    ~/rx9070-qwen/RX9070-Qwen/qwen on
+
+Run on only after tune reports a saved passing profile. Tune tests the actual
+RX 9070, from 262144 context down through 131072, 98304, 65536, 49152, 32768,
+24576, 16384, and 8192. At each context it tries Q8 KV then Q4; Q4 can affect
+quality. MTP2 stays enabled and all layers must be on GPU. CPU fitting is off.
+
+By default it processes a near-full context plus 128 generated tokens and
+requires 512 MiB sampled free VRAM. This can take several minutes. It reads
+actual AMD kernel VRAM counters every 0.2 seconds and saves logs/measurements
+under measurements/. These are whole-GPU measurements including the desktop.
+The largest passing tested profile is saved for qwen on; restart Pi afterward.
+
+Use tune --max-ctx 65536 to bound the search, --headroom 1024 for more margin,
+or --quick for allocation/short-generation only (no filled-context validation).
+Ctrl+C cleans up the temporary server. If nothing passes, settings are unchanged;
+close GPU-heavy apps and retry. Later desktop usage can consume free headroom.
+The untuned default remains 32K automatic GPU/CPU fitting.
+
 MEMORY AND MODEL SETTINGS
 
 Default context is 32768 tokens, shared by prompt/history and response: 8 times

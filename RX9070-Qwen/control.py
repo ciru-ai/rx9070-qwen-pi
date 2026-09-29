@@ -39,10 +39,15 @@ def main():
     command = sys.argv[1] if len(sys.argv) > 1 else 'status'
     args = sys.argv[2:]
     if command in ('help', '--help', '-h'):
-        print('Usage: qwen on [--ctx 32768] | off | restart [options] | status | logs | pi [Pi options]')
+        print('Usage: qwen on [--ctx 32768] | off | restart [options] | status | logs | tune [--max-ctx 262144] | pi [Pi options]')
         return 0
     if command == 'pi':
         os.execv(sys.executable, [sys.executable, str(ROOT / 'launch.py'), '--pi'] + args)
+    if command == 'tune':
+        if state() in ('active', 'activating') or live_info():
+            raise RuntimeError('Run qwen off before tuning; the tuner launches temporary measured servers.')
+        subprocess.run(['bash', str(ROOT / 'RUN-LINUX.sh'), '--prepare-only'], check=True)
+        os.execv(sys.executable, [sys.executable, str(ROOT / 'tune.py')] + args)
     if command not in ('on', 'off', 'restart', 'status', 'logs'):
         raise RuntimeError('Unknown command. Run qwen help.')
     if not shutil.which('systemctl') or not shutil.which('systemd-run'):

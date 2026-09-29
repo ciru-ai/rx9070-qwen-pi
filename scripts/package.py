@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib, shutil, zipfile
 out=Path(__file__).resolve().parents[1]; src=out/'RX9070-Qwen'
 shutil.rmtree(src/'__pycache__',ignore_errors=True)
-files=['launch.py','RUN-LINUX.sh','LOW-MEMORY.sh','START-POP-OS.sh','PI.sh','qwen','control.py','START-HERE.txt']
+files=['launch.py','RUN-LINUX.sh','LOW-MEMORY.sh','START-POP-OS.sh','PI.sh','qwen','control.py','tune.py','START-HERE.txt']
 installer='''#!/usr/bin/env bash
 # RX 9070 / Qwen3.8 27B installer for Pop!_OS. All embedded code is readable below.
 # Run: bash Install-Qwen-PopOS.sh

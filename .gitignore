@@ -14,3 +14,5 @@ RX9070-Qwen/.linux-dependencies-ready
 RX9070-Qwen/.launcher.lock
 RX9070-Qwen/ready.json
 RX9070-Qwen/server-options.json
+RX9070-Qwen/measurements/
+RX9070-Qwen/measured-profile.json
