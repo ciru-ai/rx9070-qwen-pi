@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.gguf
+*.part
+*.verified.json
+RX9070-Qwen-PopOS.zip
+RX9070-Qwen/engine/
+RX9070-Qwen/models/
+RX9070-Qwen/downloads/
+RX9070-Qwen/logs/
+RX9070-Qwen/pi-runtime/
+RX9070-Qwen/pi-agent/
+RX9070-Qwen/.linux-dependencies-ready

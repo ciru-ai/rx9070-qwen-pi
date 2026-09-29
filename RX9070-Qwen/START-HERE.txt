@@ -1,0 +1,193 @@
+RX 9070 16 GB - Qwen3.8 27B - Pop!_OS / Linux
+=================================
+
+QUICK START
+
+Single-file installer: save Install-Qwen-PopOS.sh in a folder on your SSD,
+open a terminal there, and run:
+
+    bash Install-Qwen-PopOS.sh
+
+It creates RX9070-Qwen beside itself. Keep that folder: it contains the engine
+and model. Run the same installer again to launch, or use the folder's launcher.
+
+If you downloaded the ZIP instead:
+
+1. Extract RX9070-Qwen-PopOS.zip to a folder on your SSD.
+2. Open a terminal in the extracted RX9070-Qwen folder.
+3. Run:
+
+       bash RUN-LINUX.sh
+
+Do NOT use sudo in front of that command. The script asks for your password
+only when it installs OS packages or fixes GPU group membership.
+
+First run downloads about 13 GB, installs llama.cpp plus its ROCm/HIP runtime,
+installs Pi, downloads the exact model, verifies SHA-256 checksums, and opens
+the chat page. Pi's standalone binary needs no separate Node.js/npm install.
+Keep the terminal open while chatting. Press Ctrl+C to stop. Next time, run
+the same command; completed downloads are reused. Interrupted model downloads
+resume. The server listens only on your computer, usually http://127.0.0.1:8080.
+If that port is occupied, it chooses another and prints the actual address.
+
+USE PI FOR CODING
+
+Keep the server terminal open and wait for READY. Open a second terminal:
+
+    cd /path/to/your/project
+    bash /path/to/RX9070-Qwen/PI.sh
+
+For example, if you ran the installer from ~/rx9070-qwen:
+
+    mkdir -p ~/my-project
+    cd ~/my-project
+    bash ~/rx9070-qwen/RX9070-Qwen/PI.sh
+
+Pi is already configured to use this local Qwen model. No /login, paid API key,
+or manual model selection is needed. PI.sh keeps your current project directory.
+Pi can read, edit, and write project files and execute shell commands.
+
+The dedicated Pi profile lives in RX9070-Qwen/pi-agent/. It sets the provider
+to rx9070-local, model to qwen3.8-27b, and uses the actual server port and context.
+Your usual ~/.pi profile is not modified. There is no global pi command added;
+use PI.sh to select this installation and profile. Pass extra Pi flags after it,
+for example: bash /path/to/RX9070-Qwen/PI.sh --print "Explain this project"
+
+For this small context, Pi uses a short system prompt, at most 1024 output
+tokens (512 in the 2K fallback), and matching compaction/history limits.
+It retains the standard read/bash/edit/write tools. PI.sh disables automatic
+skills/extensions loading to keep the prompt small and uses Pi's offline mode
+to disable automatic network activity; inference still calls your local server.
+Existing project instructions and large tool outputs can still consume context.
+Use small file sections/tasks; 2K is a troubleshooting profile, not a roomy
+coding workspace. Restart Pi after restarting the server with a new context.
+
+REQUIREMENTS
+
+- RX 9070 16 GB; x86-64 Linux with a working AMD kernel driver and GPU firmware.
+- Intended for up-to-date Pop!_OS (22.04/24.04 with a working RX 9070 driver).
+  Use the normal Pop!_OS software updater to install kernel/firmware updates,
+  and reboot before setup if updates are pending. Apt, dnf, and pacman installers
+  are included. The prebuilt engine targets Ubuntu/glibc; compatibility with
+  every distro is not guaranteed. Alpine/musl and NixOS are not automatic installs.
+- Python 3.10+ (installed by the shell launcher if needed).
+- 20 GB free SSD space; 32 GB system RAM recommended.
+- Internet for the first setup. No model/API subscription is required.
+
+The bundled runtime does not replace the AMD display/kernel driver. If /dev/kfd
+is absent, update the distro kernel and AMD GPU firmware/driver, then reboot.
+Pop!_OS includes the AMDGPU kernel driver. Do not install amdgpu-dkms or the
+old Ubuntu ROCm package for this launcher; the modern runtime is bundled.
+If GPU permissions need fixing, the script adds your account to the relevant
+render/video groups and asks you to log out and back in. It never changes GPU
+device permissions to world-writable or launches the model as root.
+
+DEFAULT SETTINGS
+
+- Exact model: Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf
+- Full GPU layer offload to the detected RX 9070; one chat slot.
+- Context: 4096 tokens total, shared by prompt/history and generated answer.
+- Flash Attention on; K and V caches q8_0 for main and MTP contexts.
+- MTP on: --spec-type draft-mtp, at most 2 draft tokens.
+- Prompt batch 256; physical microbatch 64; prompt RAM cache disabled.
+- Engine's embedded web chat and model's embedded chat template.
+- Thinking is off to conserve the small context and response budget; MTP stays on.
+- Text chat only; no extra vision projector is downloaded.
+
+The file is 12,120,016,960 bytes (12.12 decimal GB, about 11.29 GiB).
+File size is not an exact measurement of GPU weight allocation. KV cache,
+compute buffers, MTP/recurrent state, the display, and other applications
+all need memory too. There is no guaranteed fixed 3.5 GB KV allowance.
+These are conservative starting settings, not a hardware-validated fit promise.
+
+If startup reports a memory allocation failure, the normal launcher retries
+once at 2048 context and one MTP draft token. It keeps MTP enabled. The retry
+is only for startup allocation errors, not arbitrary crashes or later errors.
+
+LOW-MEMORY / TROUBLESHOOTING
+
+Close games and other GPU-heavy apps first. Start directly in the smaller mode:
+
+    bash LOW-MEMORY.sh
+
+For a deliberate comparison or to diagnose MTP-specific errors:
+
+    bash RUN-LINUX.sh --low-memory --no-mtp
+
+That command disables MTP explicitly. Normal launch never silently disables it.
+MTP speedup varies with hardware and prompts; no tokens/second claim is made.
+
+If the small profile works reliably, you can try a larger context:
+
+    bash RUN-LINUX.sh --ctx 8192
+
+This may run out of VRAM. An explicitly requested context is not reduced
+automatically. Use the normal or low-memory launcher to recover.
+
+Already have this exact GGUF? Avoid another download:
+
+    bash RUN-LINUX.sh --model "/absolute/path/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf"
+
+That file is SHA-256 checked. A different model/quant is intentionally rejected.
+After a successful verification, unchanged file size and timestamp let the
+launcher skip rehashing on subsequent runs. Force rechecking with --verify.
+
+No GPU found: update the AMD driver/firmware and reboot. Check that /dev/kfd
+and your AMD /dev/dri/renderD* node are readable and writable by your account.
+The launcher stops before downloading the model if the engine cannot see a 9070.
+
+Missing shared library / GLIBC error: use a current supported distro, ensure
+its package updates are installed, and review the error in the terminal.
+On Arch, if pacman reports unavailable package versions, complete your normal
+full system update first; this script does not do a partial database upgrade.
+
+If a checksum fails, the error names the bad file. Move it aside (or delete
+only that named download) and rerun. Do not disable checksum validation.
+
+Logs are saved under logs/. Send the newest log with the distro/version if
+you need help. A driver reset or crash after the chat is ready stops the server;
+the launcher does not hide it or repeatedly restart the GPU workload.
+
+OpenAI-compatible API: http://127.0.0.1:8080/v1 (use the printed port).
+Model alias: qwen3.8-27b. No API key is configured; access is localhost only.
+
+All model/engine/Pi/profile/download/log files stay in this extracted folder.
+Pi may edit files in the project where you start it. Delete the installation
+folder to remove the installed apps and profile; project edits, OS packages,
+and added GPU group memberships remain.
+No background service, startup task, firewall rule, or telemetry is installed
+by this launcher. Subsequent normal runs use the pinned installed engine.
+
+PINNED SOURCES AND VALIDATION (2026-09-29)
+
+Engine: Lemonade's llama.cpp ROCm build b1334, gfx120X (includes gfx1201).
+The engine reports commit 680a036. This is a community nightly, including a
+ROCm nightly runtime, not an AMD production support guarantee.
+https://github.com/lemonade-sdk/llamacpp-rocm/releases/tag/b1334
+SHA-256: f37d79f0e81ccda27a7f1f12d6fdaf0669b2399ca9409a9b9dd5c25d126a6beb
+
+Model repo/revision:
+https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+d562806dbafae37109975e970aae91b43e73b440
+SHA-256: 58fd826723939933dc86f45b7fe04545cbc2de1c70f6fe2cdd3858c87a98c12f
+
+Pi: v0.87.1, official standalone Linux x64 release.
+https://github.com/earendil-works/pi/releases/tag/v0.87.1
+SHA-256: 80d78dd62d50049a006b981d994c61255bcc10e730b0c278d4ea0a755909764c
+https://github.com/earendil-works/pi/blob/v0.87.1/packages/coding-agent/docs/models.md
+https://github.com/earendil-works/pi/blob/v0.87.1/packages/coding-agent/docs/settings.md
+
+AMD explains the bundled-runtime distribution here:
+https://rocm.docs.amd.com/projects/ai-ecosystem/en/latest/inference/llamacpp.html
+System76 documents using ROCm with Pop!_OS's built-in AMDGPU driver:
+https://support.system76.com/support/rocm/
+MTP and server options:
+https://github.com/ggml-org/llama.cpp/blob/master/docs/speculative.md
+https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
+
+Validation: the pinned Linux engine was downloaded, SHA-256 verified, and its
+--version, --help, and --list-devices commands were executed. Launcher download
+and process-management behavior was tested with local fixtures. The real Pi
+binary loaded the saved local-model defaults and completed a streamed tool-call
+round trip against a mock local OpenAI-compatible endpoint. The full 27B model
+has NOT been run on an RX 9070 by the author of this package.
